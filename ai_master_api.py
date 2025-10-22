@@ -5,15 +5,14 @@ Tek dosyalı Serper.dev tabanlı AI API
 pip install fastapi uvicorn requests cachetools python-dotenv
 
 Render / local çalıştırma:
-export SERPER_API_KEY=...
-uvicorn serper_ai_api:app --host 0.0.0.0 --port 8000 --reload
+SERPER_API_KEY=your_key uvicorn serper_ai_api:app --host 0.0.0.0 --port $PORT
 """
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from cachetools import TTLCache
-import requests, os, time, threading, re
+import requests, os, time, threading
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
@@ -27,10 +26,12 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# Direct environment variable (no .env required)
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 if not SERPER_API_KEY:
-    raise RuntimeError("SERPER_API_KEY is required")
+    raise RuntimeError("SERPER_API_KEY is required in environment variables")
 
+# Cache ve Rate-limit
 CACHE = TTLCache(maxsize=1024, ttl=600)
 RATE_LOCK = threading.Lock()
 RATE_STORE: Dict[str, List[float]] = {}
@@ -160,6 +161,7 @@ async def ask(req: AskRequest, request: Request):
     set_cache(cache_key, result)
     return {"cached": False, "result": result}
 
+# -------- HEALTH & ROOT --------
 @app.get("/")
 def root():
     return {
